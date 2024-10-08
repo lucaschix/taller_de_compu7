@@ -21,8 +21,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private MediaPlayer movingSound;
 
 
-    private boolean isStable = true;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -31,17 +29,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         statusTextView = findViewById(R.id.statusTextView);
         Button resetButton = findViewById(R.id.resetButton);
 
+        // Inicializar el SensorManager y los sensores
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
 
-        stableSound = MediaPlayer.create(this, R.raw.pepe); // Asegúrate de tener el sonido en /res/raw
-        movingSound = MediaPlayer.create(this, R.raw.mario);
-        movingSound = MediaPlayer.create(this, R.raw.despacio); // Asegúrate de que este sonido esté en /res/raw
-
+        // Inicializar los sonidos
+        stableSound = MediaPlayer.create(this, R.raw.mario); // Cambia "mario" por el nombre del archivo correcto
+        movingSound = MediaPlayer.create(this, R.raw.despacio); // Cambia "despacito" por el nombre del archivo correcto
 
         resetButton.setOnClickListener(v -> resetDetection());
     }
+
 
     @Override
     public void onSensorChanged(SensorEvent event) {
@@ -63,7 +62,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
     }
 
-
     private void setStatus(String status) {
         // Comprobar si el estado ha cambiado
         if (!status.equals(statusTextView.getText().toString().replace("Estado: ", ""))) {
@@ -74,12 +72,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 if (movingSound.isPlaying()) {
                     movingSound.stop();  // Detener sonido de "En Movimiento" si está sonando
                 }
-                stableSound.start();  // Sonido para "Estable"
+                if (stableSound != null && !stableSound.isPlaying()) {
+                    stableSound.start();  // Sonido para "Estable"
+                }
             } else if (status.equals("En Movimiento")) {
                 if (stableSound.isPlaying()) {
                     stableSound.stop();  // Detener sonido de "Estable" si está sonando
                 }
-                movingSound.start();   // Sonido para "En Movimiento"
+                if (movingSound != null && !movingSound.isPlaying()) {
+                    movingSound.start();   // Sonido para "En Movimiento"
+                }
             }
         }
     }
@@ -105,6 +107,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onPause();
         sensorManager.unregisterListener(this);
     }
+
     @Override
     protected void onDestroy() {
         if (stableSound != null) {
@@ -117,5 +120,4 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
         super.onDestroy();
     }
-
 }
