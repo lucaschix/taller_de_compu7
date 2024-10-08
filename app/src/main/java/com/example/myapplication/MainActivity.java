@@ -20,6 +20,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private MediaPlayer stableSound;
     private MediaPlayer movingSound;
 
+
     private boolean isStable = true;
 
     @Override
@@ -36,6 +37,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         stableSound = MediaPlayer.create(this, R.raw.pepe); // Asegúrate de tener el sonido en /res/raw
         movingSound = MediaPlayer.create(this, R.raw.mario);
+        movingSound = MediaPlayer.create(this, R.raw.despacio); // Asegúrate de que este sonido esté en /res/raw
+
 
         resetButton.setOnClickListener(v -> resetDetection());
     }
@@ -43,11 +46,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     public void onSensorChanged(SensorEvent event) {
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            float z = event.values[2];
-            if (Math.abs(z) < 0.5) {
-                setStatus("Estable");
+            float z = event.values[2];  // Componente Z del acelerómetro
+            float threshold = 8.0f;      // Umbral para considerar que está plano (ajustable)
+
+            // Verificar si el dispositivo está en una superficie plana
+            if (Math.abs(z) >= threshold) {
+                setStatus("Estable");      // Dispositivo en posición plana
             } else {
-                setStatus("En Movimiento");
+                setStatus("En Movimiento"); // Dispositivo no está plano o en movimiento
             }
         } else if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
             // Lógica para detección de movimiento
@@ -57,16 +63,28 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
     }
 
+
     private void setStatus(String status) {
+        // Comprobar si el estado ha cambiado
         if (!status.equals(statusTextView.getText().toString().replace("Estado: ", ""))) {
             statusTextView.setText("Estado: " + status);
+
+            // Reproducir el sonido correspondiente basado en el estado
             if (status.equals("Estable")) {
-                stableSound.start();
-            } else {
-                movingSound.start();
+                if (movingSound.isPlaying()) {
+                    movingSound.stop();  // Detener sonido de "En Movimiento" si está sonando
+                }
+                stableSound.start();  // Sonido para "Estable"
+            } else if (status.equals("En Movimiento")) {
+                if (stableSound.isPlaying()) {
+                    stableSound.stop();  // Detener sonido de "Estable" si está sonando
+                }
+                movingSound.start();   // Sonido para "En Movimiento"
             }
         }
     }
+
+
 
     private void resetDetection() {
         statusTextView.setText("Estado: Estable");
@@ -87,7 +105,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onPause();
         sensorManager.unregisterListener(this);
     }
-
     @Override
     protected void onDestroy() {
         if (stableSound != null) {
