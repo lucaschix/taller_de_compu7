@@ -21,6 +21,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private MediaPlayer movingSound;
 
     private String currentStatus = "Estable"; // Estado inicial
+    private boolean isStable = true; // Estado de estabilidad
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,8 +37,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
 
         // Inicializar los sonidos
-        stableSound = MediaPlayer.create(this, R.raw.mario); // Cambia "mario" por el nombre del archivo correcto
-        movingSound = MediaPlayer.create(this, R.raw.timbre); // Cambia "despacito" por el nombre del archivo correcto
+        stableSound = MediaPlayer.create(this, R.raw.mario);
+        movingSound = MediaPlayer.create(this, R.raw.timbre);
 
         resetButton.setOnClickListener(v -> resetDetection());
     }
@@ -45,23 +46,30 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     public void onSensorChanged(SensorEvent event) {
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            float z = event.values[2];  // Componente Z del acelerómetro
-            float threshold = 8.0f;      // Umbral para considerar que está plano
+            handleAccelerometer(event);
+        } else if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
+            handleGyroscope(event);
+        }
+    }
 
-            boolean isStable = Math.abs(z) >= threshold;
+    private void handleAccelerometer(SensorEvent event) {
+        float z = event.values[2];  // Componente Z del acelerómetro
+        float threshold = 8.0f;     // Umbral para considerar que está plano
 
-            // Lógica para detección de movimiento
-            boolean isMoving = false;
-            if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
-                isMoving = Math.abs(event.values[0]) > 0.5 || Math.abs(event.values[1]) > 0.5 || Math.abs(event.values[2]) > 0.5;
-            }
+        isStable = Math.abs(z) >= threshold;
 
-            // Determinar el estado
-            if (isStable && !isMoving) {
-                setStatus("Estable");
-            } else {
-                setStatus("En Movimiento");
-            }
+        // Determinar el estado
+        if (isStable && currentStatus.equals("En Movimiento")) {
+            setStatus("Estable");
+        }
+    }
+
+    private void handleGyroscope(SensorEvent event) {
+        boolean isMoving = Math.abs(event.values[0]) > 0.5 || Math.abs(event.values[1]) > 0.5 || Math.abs(event.values[2]) > 0.5;
+
+        // Si detecta movimiento y el estado actual es estable, cambia a "En Movimiento"
+        if (isMoving && currentStatus.equals("Estable")) {
+            setStatus("En Movimiento");
         }
     }
 
@@ -71,9 +79,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             statusTextView.setText("Estado: " + status);
 
             if (status.equals("Estable")) {
-              movingSound.stop();
-              stableSound.start();
-            }else{
+                if (movingSound.isPlaying()) {
+                    movingSound.stop();
+                    movingSound.prepareAsync(); // Reiniciar el sonido para la próxima vez
+                }
+                stableSound.start();
+            } else {
+                if (stableSound.isPlaying()) {
+                    stableSound.stop();
+                    stableSound.prepareAsync(); // Reiniciar el sonido para la próxima vez
+                }
                 movingSound.start();
             }
         }
